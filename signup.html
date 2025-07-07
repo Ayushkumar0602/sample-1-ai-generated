@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Moodboard App</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 400px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        input[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+
+        .error-message {
+            color: red;
+            margin-top: 5px;
+        }
+
+        .oauth-buttons {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .oauth-button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 0 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+            text-decoration: none;
+        }
+
+        .google-button {
+            background-color: #db4437;
+        }
+
+        .facebook-button {
+            background-color: #3b5998;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Sign Up</h2>
+        <form id="signupForm">
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" placeholder="Your Name" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" placeholder="Your Email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" placeholder="Your Password" required>
+            </div>
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password:</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm Password" required>
+                <div id="passwordError" class="error-message"></div>
+            </div>
+            <input type="submit" value="Sign Up">
+        </form>
+
+        <div class="oauth-buttons">
+            <a href="#" class="oauth-button google-button" onclick="signInWithGoogle()">Sign Up with Google</a>
+            <a href="#" class="oauth-button facebook-button" onclick="signInWithFacebook()">Sign Up with Facebook</a>
+        </div>
+
+        <div class="login-link">
+            Already have an account? <a href="login.html">Log In</a>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+          "storageBucket": "study2-7bdc7.firebasestorage.app",
+          "authDomain": "study2-7bdc7.firebaseapp.com",
+          "messagingSenderId": "320617984870",
+          "appId": "1:320617984870:web:04b61ea4ee88ae057e4ea7",
+          "projectId": "study2-7bdc7",
+          "apiKey": "AIzaSyCVYdfql5aqHrChlA1v3nxRLkIbYyWMvUg"
+        };
+
+        // Initialize Firebase (Import Firebase first - included in a separate script tag below for clarity)
+        // import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        // import { getAuth, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+        // import { getFirestore, collection, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+        let app;
+        let auth;
+        let db;
+
+        function initializeFirebase() {
+            app = firebase.initializeApp(firebaseConfig);
+            auth = firebase.auth();
+            db = firebase.firestore();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeFirebase();
+
+            const signupForm = document.getElementById('signupForm');
+            const passwordInput = document.getElementById('password');
+            const confirmPasswordInput = document.getElementById('confirmPassword');
+            const passwordError = document.getElementById('passwordError');
+
+            signupForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const name = signupForm.name.value;
+                const email = signupForm.email.value;
+                const password = passwordInput.value;
+                const confirmPassword = confirmPasswordInput.value;
+
+                if (password !== confirmPassword) {
+                    passwordError.textContent = "Passwords do not match.";
+                    return;
+                } else {
+                    passwordError.textContent = ""; // Clear error message
+                }
+
+                try {
+                    const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+                    const user = userCredential.user;
+
+                    // Store additional user data in Firestore
+                    await firebase.firestore().collection('users').doc(user.uid).set({
+                        name: name,
+                        email: email
+                        // Add other user data here
+                    });
+
+                    console.log("User signed up successfully:", user);
+                    alert("Sign up successful! Redirecting to dashboard...");
+                    window.location.href = "dashboard.html"; // Redirect to dashboard
+                } catch (error) {
+                    console.error("Error signing up:", error);
+                    alert("Sign up failed: " + error.message);
+                }
+            });
+        });
+
+        function signInWithGoogle() {
+             const provider = new firebase.auth.GoogleAuthProvider();
+
+            firebase.auth().signInWithPopup(provider)
+                .then((result) => {
+                    // This gives you a Google Access Token. You can use it to access the Google API.
+                    const credential = result.credential;
+                    const token = credential.accessToken;
+                    // The signed-in user info.
+                    const user = result.user;
+
+                    // Store user data in Firestore
+                    firebase.firestore().collection('users').doc(user.uid).set({
+                        name: user.displayName,
+                        email: user.email
+                    }).then(() => {
+                        console.log("User signed in with Google:", user);
+                        alert("Sign up with Google successful! Redirecting to dashboard...");
+                        window.location.href = "dashboard.html"; // Redirect to dashboard
+                    });
+                })
+                .catch((error) => {
+                    // Handle Errors here.
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    // The email of the user's account used.
+                    const email = error.email;
+                    // The firebase.auth.AuthCredential type that was used.
+                    const credential = error.credential;
+                    console.error("Error signing in with Google:", error);
+                    alert("Sign up with Google failed: " + errorMessage);
+                });
+        }
+
+        function signInWithFacebook() {
+            const provider = new firebase.auth.FacebookAuthProvider();
+
+            firebase.auth().signInWithPopup(provider)
+                .then((result) => {
+                    // This gives you a Facebook Access Token. You can use it to access the Facebook API.
+                    const credential = result.credential;
+                    const accessToken = credential.accessToken;
+
+                    // The signed-in user info.
+                    const user = result.user;
+
+                    // Store user data in Firestore
+                    firebase.firestore().collection('users').doc(user.uid).set({
+                        name: user.displayName,
+                        email: user.email
+                    }).then(() => {
+                        console.log("User signed in with Facebook:", user);
+                        alert("Sign up with Facebook successful! Redirecting to dashboard...");
+                        window.location.href = "dashboard.html"; // Redirect to dashboard
+                    });
+                })
+                .catch((error) => {
+                    // Handle Errors here.
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    // The email of the user's account used.
+                    const email = error.email;
+                    // The firebase.auth.AuthCredential type that was used.
+                    const credential = error.credential;
+                    console.error("Error signing in with Facebook:", error);
+                    alert("Sign up with Facebook failed: " + errorMessage);
+                });
+        }
+
+    </script>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+</body>
+</html>

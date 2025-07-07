@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Moodboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #007bff;
+        }
+
+        #moodboard-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .moodboard-image {
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .moodboard-image img {
+            width: 100%;
+            height: 200px; /* Fixed height for consistent display */
+            object-fit: cover;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        .moodboard-image:hover img {
+            transform: scale(1.1);
+        }
+
+        .image-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .moodboard-image:hover .image-overlay {
+            opacity: 1;
+        }
+
+        .image-overlay button {
+            background-color: #dc3545;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+
+        .image-overlay button:hover {
+            background-color: #c82333;
+        }
+
+        #loading-message {
+            text-align: center;
+            margin-top: 20px;
+            font-style: italic;
+            color: #777;
+        }
+
+        #error-message {
+            text-align: center;
+            margin-top: 20px;
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            #moodboard-images {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 10px;
+            }
+
+            .moodboard-image img {
+                height: 150px; /* Adjusted height for smaller screens */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Moodboard</h1>
+
+        <div id="loading-message">Loading moodboard images...</div>
+        <div id="error-message" style="display:none;"></div>
+        <div id="moodboard-images">
+            <!-- Images will be dynamically added here -->
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration (Replace with your actual config)
+        const firebaseConfig = {
+            "storageBucket": "study2-7bdc7.firebasestorage.app",
+            "authDomain": "study2-7bdc7.firebaseapp.com",
+            "messagingSenderId": "320617984870",
+            "appId": "1:320617984870:web:04b61ea4ee88ae057e4ea7",
+            "projectId": "study2-7bdc7",
+            "apiKey": "AIzaSyCVYdfql5aqHrChlA1v3nxRLkIbYyWMvUg"
+        };
+
+        // Initialize Firebase (Check if already initialized)
+        let app;
+        try {
+            app = firebase.initializeApp(firebaseConfig);
+        } catch (e) {
+            if (e.code === 'app/duplicate-app') {
+                app = firebase.app();
+            } else {
+                console.error("Firebase initialization error:", e);
+                document.getElementById('loading-message').style.display = 'none';
+                document.getElementById('error-message').textContent = "Failed to initialize Firebase.";
+                document.getElementById('error-message').style.display = 'block';
+                throw e; // Re-throw the error for further debugging
+            }
+        }
+
+        const storage = firebase.storage();
+        const db = firebase.firestore();
+
+        // Function to fetch and display moodboard images
+        async function loadMoodboardImages() {
+            const moodboardId = getMoodboardIdFromUrl(); // Implement this function
+            if (!moodboardId) {
+                document.getElementById('loading-message').style.display = 'none';
+                document.getElementById('error-message').textContent = "Moodboard ID not found in URL.";
+                document.getElementById('error-message').style.display = 'block';
+                return;
+            }
+
+            try {
+                // Assuming your moodboards collection is called 'moodboards'
+                const moodboardDoc = await db.collection('moodboards').doc(moodboardId).get();
+
+                if (!moodboardDoc.exists) {
+                    document.getElementById('loading-message').style.display = 'none';
+                    document.getElementById('error-message').textContent = "Moodboard not found.";
+                    document.getElementById('error-message').style.display = 'block';
+                    return;
+                }
+
+                const moodboardData = moodboardDoc.data();
+                const imagePaths = moodboardData.images || []; // Assuming images are stored as an array of paths
+
+                if (imagePaths.length === 0) {
+                    document.getElementById('loading-message').textContent = "No images found in this moodboard.";
+                    return;
+                }
+
+                const moodboardImagesContainer = document.getElementById('moodboard-images');
+                moodboardImagesContainer.innerHTML = ''; // Clear existing images
+
+                for (const imagePath of imagePaths) {
+                    // Get the download URL for each image from Firebase Storage
+                    const storageRef = storage.ref(imagePath);
+                    const imageUrl = await storageRef.getDownloadURL();
+
+                    // Create the HTML for each image
+                    const imageDiv = document.createElement('div');
+                    imageDiv.classList.add('moodboard-image');
+
+                    const imgElement = document.createElement('img');
+                    imgElement.src = imageUrl;
+                    imgElement.alt = 'Moodboard Image';
+
+                    const overlayDiv = document.createElement('div');
+                    overlayDiv.classList.add('image-overlay');
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Delete';
+                    deleteButton.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        deleteImage(moodboardId, imagePath);
+                    });
+
+                    overlayDiv.appendChild(deleteButton);
+                    imageDiv.appendChild(imgElement);
+                    imageDiv.appendChild(overlayDiv);
+                    moodboardImagesContainer.appendChild(imageDiv);
+
+                }
+                document.getElementById('loading-message').style.display = 'none';
+
+            } catch (error) {
+                console.error('Error fetching images:', error);
+                document.getElementById('loading-message').style.display = 'none';
+                document.getElementById('error-message').textContent = "Failed to load moodboard images.";
+                document.getElementById('error-message').style.display = 'block';
+            }
+        }
+
+        // Function to delete an image from the moodboard
+        async function deleteImage(moodboardId, imagePath) {
+            if (!confirm("Are you sure you want to delete this image?")) {
+                return;
+            }
+
+            try {
+                // Remove image path from moodboard document
+                const moodboardRef = db.collection('moodboards').doc(moodboardId);
+                await moodboardRef.update({
+                    images: firebase.firestore.FieldValue.arrayRemove(imagePath)
+                });
+
+                // Delete image from Firebase Storage
+                const storageRef = storage.ref(imagePath);
+                await storageRef.delete();
+
+                // Reload moodboard images
+                loadMoodboardImages();
+                alert("Image deleted successfully!");
+
+            } catch (error) {
+                console.error("Error deleting image:", error);
+                alert("Failed to delete image.");
+            }
+        }
+
+        // Function to extract moodboard ID from the URL
+        function getMoodboardIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('id'); // Assuming the ID is passed as a query parameter 'id'
+        }
+
+        // Load images when the page loads
+        window.onload = loadMoodboardImages;
+
+    </script>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Moodboard</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #007bff;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="file"],
+        textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .image-preview-container {
+            margin-top: 20px;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        #moodboard-images-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .moodboard-image {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Create a New Moodboard</h1>
+
+        <label for="moodboard-title">Moodboard Title:</label>
+        <input type="text" id="moodboard-title" name="moodboard-title" placeholder="Enter moodboard title" required>
+
+        <label for="moodboard-description">Moodboard Description:</label>
+        <textarea id="moodboard-description" name="moodboard-description" rows="4" placeholder="Enter moodboard description"></textarea>
+
+        <label for="image-upload">Upload Images:</label>
+        <input type="file" id="image-upload" name="image-upload" multiple accept="image/*">
+
+        <div class="image-preview-container">
+            <!-- Image preview will be dynamically added here -->
+        </div>
+
+        <button id="create-moodboard-button">Create Moodboard</button>
+
+        <div id="moodboard-images-container">
+            <!-- Dynamically added images will appear here -->
+        </div>
+    </div>
+
+    <script>
+        const storageBucket = "study2-7bdc7.firebasestorage.app";
+        const authDomain = "study2-7bdc7.firebaseapp.com";
+        const messagingSenderId = "320617984870";
+        const appId = "1:320617984870:web:04b61ea4ee88ae057e4ea7";
+        const projectId = "study2-7bdc7";
+        const apiKey = "AIzaSyCVYdfql5aqHrChlA1v3nxRLkIbYyWMvUg";
+
+        const imageUpload = document.getElementById('image-upload');
+        const imagePreviewContainer = document.querySelector('.image-preview-container');
+        const moodboardImagesContainer = document.getElementById('moodboard-images-container');
+        const createMoodboardButton = document.getElementById('create-moodboard-button');
+        const moodboardTitleInput = document.getElementById('moodboard-title');
+        const moodboardDescriptionInput = document.getElementById('moodboard-description');
+
+        let uploadedImages = []; // Array to store uploaded image URLs
+
+        imageUpload.addEventListener('change', (event) => {
+            const files = event.target.files;
+            imagePreviewContainer.innerHTML = ''; // Clear previous previews
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const reader = new FileReader();
+
+                reader.onload = (e) => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.classList.add('image-preview');
+                    imagePreviewContainer.appendChild(img);
+                }
+
+                reader.readAsDataURL(file);
+            }
+        });
+
+        createMoodboardButton.addEventListener('click', async () => {
+            const moodboardTitle = moodboardTitleInput.value;
+            const moodboardDescription = moodboardDescriptionInput.value;
+
+            if (!moodboardTitle) {
+                alert("Please enter a moodboard title.");
+                return;
+            }
+
+            const files = imageUpload.files;
+            if (files.length === 0) {
+                alert("Please upload at least one image.");
+                return;
+            }
+
+            // Simulate uploading images )
+            uploadedImages = []; // Reset the array
+            moodboardImagesContainer.innerHTML = ''; // Clear previous images
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const imageUrl = URL.createObjectURL(file); // Temporary URL for demonstration
+
+                // Simulate Firebase S)
+                await simulateFileUpload(file); // Await the simulated upload
+
+                uploadedImages.push(imageUrl); // Store the temporary URL
+                
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.classList.add('moodboard-image');
+                moodboardImagesContainer.appendChild(img);
+            }
+
+            // Simulate creating moodboard in Fires)
+            await simulateCreateMoodboard(moodboardTitle, moodboardDescription, uploadedImages);
+
+            alert("Moodboard created successfully!");
+            moodboardTitleInput.value = '';
+            moodboardDescriptionInput.value = '';
+            imageUpload.value = '';
+            imagePreviewContainer.innerHTML = '';
+            moodboardImagesContainer.innerHTML = '';
+            uploadedImages = [];
+        });
+
+        // Simulated Firebase S)
+        async function simulateFileUpload(file) {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    console.log("Simulated file upload:", file.name);
+                    resolve();
+                }, 500); // Simulate a 0.5 second upload delay
+            });
+        }
+
+        // Simulated Firebase Fires)
+        async function simulateCreateMoodboard(title, description, images) {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    console.log("Simulated moodboard creation:", { title, description, images });
+                    resolve();
+                }, 500); // Simulate a 0.5 second delay
+            });
+        }
+    </script>
+</body>
+</html>

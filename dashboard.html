@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Moodboard App</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .card h2 {
+            margin-bottom: 10px;
+        }
+
+        .card p {
+            margin-bottom: 15px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        .moodboard-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .moodboard-list li {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .moodboard-list li a {
+            text-decoration: none;
+            color: #007bff;
+        }
+
+        .moodboard-list li button {
+            background-color: #dc3545;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .moodboard-list li button:hover {
+            background-color: #c82333;
+        }
+
+        #logout-button {
+            background-color: #6c757d;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 20px;
+        }
+
+        #logout-button:hover {
+            background-color: #5a6268;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Dashboard</h1>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <h2>Welcome!</h2>
+                <p>Manage your moodboards and create new ones.</p>
+                <a href="#" class="button" id="create-moodboard-button">Create New Moodboard</a>
+            </div>
+
+            <div class="card">
+                <h2>Your Moodboards</h2>
+                <ul class="moodboard-list" id="moodboard-list">
+                    <!-- Moodboard items will be dynamically added here -->
+                </ul>
+            </div>
+        </div>
+
+        <button id="logout-button">Logout</button>
+    </div>
+
+    <script>
+        // Firebase Configuration (Replace with your actual config)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCVYdfql5aqHrChlA1v3nxRLkIbYyWMvUg",
+            authDomain: "study2-7bdc7.firebaseapp.com",
+            projectId: "study2-7bdc7",
+            storageBucket: "study2-7bdc7.firebasestorage.app",
+            messagingSenderId: "320617984870",
+            appId: "1:320617984870:web:04b61ea4ee88ae057e4ea7"
+        };
+
+        // Initialize Firebase (Check if already initialized)
+        let app;
+        if (firebase.apps.length === 0) {
+            app = firebase.initializeApp(firebaseConfig);
+        } else {
+            app = firebase.apps[0];
+        }
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // DOM Elements
+        const moodboardList = document.getElementById('moodboard-list');
+        const createMoodboardButton = document.getElementById('create-moodboard-button');
+        const logoutButton = document.getElementById('logout-button');
+
+        // Authentication State Listener
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // User is signed in
+                loadMoodboards(user.uid);
+            } else {
+                // User is signed out
+                window.location.href = '/login.html'; // Redirect to login page
+            }
+        });
+
+        // Load Moodboards Function
+        function loadMoodboards(userId) {
+            moodboardList.innerHTML = ''; // Clear existing list
+
+            db.collection('moodboards')
+                .where('userId', '==', userId)
+                .get()
+                .then(querySnapshot => {
+                    querySnapshot.forEach(doc => {
+                        const moodboardData = doc.data();
+                        const moodboardId = doc.id;
+
+                        const listItem = document.createElement('li');
+                        listItem.innerHTML = `
+                            <a href="/viewMoodboard.html?id=${moodboardId}">${moodboardData.title}</a>
+                            <button data-id="${moodboardId}">Delete</button>
+                        `;
+                        moodboardList.appendChild(listItem);
+
+                        // Delete Button Event Listener
+                        listItem.querySelector('button').addEventListener('click', (event) => {
+                            const moodboardIdToDelete = event.target.dataset.id;
+                            deleteMoodboard(moodboardIdToDelete);
+                        });
+                    });
+                })
+                .catch(error => {
+                    console.error('Error getting moodboards:', error);
+                    alert('Error loading moodboards. Please try again.');
+                });
+        }
+
+        // Delete Moodboard Function
+        function deleteMoodboard(moodboardId) {
+            if (confirm('Are you sure you want to delete this moodboard?')) {
+                db.collection('moodboards').doc(moodboardId).delete()
+                    .then(() => {
+                        console.log('Moodboard deleted successfully!');
+                        // Reload moodboards after deletion
+                        auth.currentUser && loadMoodboards(auth.currentUser.uid);
+                    })
+                    .catch(error => {
+                        console.error('Error deleting moodboard:', error);
+                        alert('Error deleting moodboard. Please try again.');
+                    });
+            }
+        }
+
+        // Create Moodboard Button Event Listener
+        createMoodboardButton.addEventListener('click', () => {
+            window.location.href = '/createMoodboard.html'; // Redirect to create moodboard page
+        });
+
+        // Logout Button Event Listener
+        logoutButton.addEventListener('click', () => {
+            auth.signOut()
+                .then(() => {
+                    // Sign-out successful.
+                    window.location.href = '/login.html'; // Redirect to login page
+                })
+                .catch(error => {
+                    // An error happened.
+                    console.error('Error signing out:', error);
+                    alert('Error logging out. Please try again.');
+                });
+        });
+    </script>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+</body>
+</html>
